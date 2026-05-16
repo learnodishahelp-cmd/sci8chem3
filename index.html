@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Molecules & Compounds | Flip Cards & Quiz</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', 'Noto Sans Oriya', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #ede7f6 0%, #d1c4e9 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+        }
+        .mobile-frame {
+            max-width: 480px;
+            width: 100%;
+            background: rgba(255,255,255,0.94);
+            backdrop-filter: blur(20px);
+            border-radius: 48px;
+            box-shadow: 0 30px 50px rgba(40,10,80,0.2);
+            padding: 18px 14px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            border: 1px solid rgba(140,100,200,0.4);
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 0 8px;
+        }
+        .header h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #4a148c;
+            background: rgba(209,196,233,0.85);
+            padding: 6px 18px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .page-indicator {
+            background: #ede7f6;
+            border-radius: 30px;
+            padding: 6px 16px;
+            font-weight: 600;
+            color: #4a148c;
+            font-size: 0.9rem;
+        }
+        .card {
+            background: #fffffffa;
+            border-radius: 32px;
+            padding: 20px 16px;
+            box-shadow: 0 12px 28px rgba(40,20,80,0.1);
+            border: 1px solid #b39ddb;
+            min-height: 380px;
+            display: flex;
+            flex-direction: column;
+        }
+        .page { display:none; flex-direction:column; gap:15px; }
+        .page.active { display:flex; }
+        .video-thumb-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            cursor: pointer;
+            background: #000;
+            margin-bottom: 10px;
+        }
+        .video-thumb-container img { width:100%; display:block; }
+        .play-overlay {
+            position: absolute;
+            top:50%; left:50%;
+            transform: translate(-50%,-50%);
+            width:60px; height:60px;
+            background: rgba(255,0,0,0.85);
+            border-radius: 50%;
+            display:flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .play-overlay::after {
+            content: '';
+            border: 14px solid transparent;
+            border-left: 24px solid white;
+            margin-left:4px;
+        }
+        .watch-btn {
+            background: #ff0000;
+            color:white;
+            font-weight:bold;
+            padding:10px;
+            border-radius:32px;
+            text-decoration:none;
+            display:flex;
+            align-items: center;
+            justify-content: center;
+            gap:8px;
+            box-shadow:0 4px 12px rgba(255,0,0,0.3);
+            margin-bottom: 8px;
+        }
+        .watch-btn svg { width:20px; height:20px; fill:white; }
+
+        .flip-container {
+            perspective: 1000px;
+            margin-bottom: 12px;
+        }
+        .flipper {
+            position: relative;
+            width:100%; height:130px;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .flipper.flipped { transform: rotateY(180deg); }
+        .front, .back {
+            position: absolute;
+            width:100%; height:100%;
+            backface-visibility: hidden;
+            border-radius:20px;
+            padding:12px 14px;
+            display:flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            box-shadow:0 2px 8px rgba(0,0,0,0.08);
+        }
+        .front {
+            background: #ede7f6;
+            border-left:6px solid #6a1b9a;
+            font-weight:600;
+            font-size:1rem;
+            color: #4a148c;
+        }
+        .back {
+            background: #d1c4e9;
+            border-right:6px solid #6a1b9a;
+            transform: rotateY(180deg);
+            font-family: 'Noto Sans Oriya', sans-serif;
+            font-size:0.95rem;
+            color:#4a148c;
+            font-weight:500;
+        }
+        .flip-instruction {
+            font-size:0.7rem;
+            color:#666;
+            margin-top:4px;
+        }
+
+        .quiz-question {
+            font-size:1.2rem;
+            font-weight:600;
+            color:#4a148c;
+        }
+        .options { display:flex; flex-direction:column; gap:10px; }
+        .option-btn {
+            background:#ede7f6;
+            border:2px solid #b39ddb;
+            border-radius:18px;
+            padding:12px 16px;
+            font-size:1rem;
+            text-align:left;
+            cursor:pointer;
+            transition:0.2s;
+        }
+        .option-btn.selected {
+            background:#d1c4e9;
+            border-color:#6a1b9a;
+            font-weight:700;
+        }
+        .option-btn.correct {
+            background:#c8e6c9;
+            border-color:#2e7d32;
+        }
+        .option-btn.incorrect {
+            background:#ffcdd2;
+            border-color:#c62828;
+        }
+        .score-box {
+            display:flex;
+            justify-content: space-between;
+            background:#ede7f6;
+            border-radius:20px;
+            padding:10px 16px;
+            font-weight:600;
+            color:#4a148c;
+        }
+        .nav-buttons { display:flex; gap:10px; margin-top:auto; }
+        .nav-btn {
+            background: linear-gradient(135deg, #6a1b9a, #4a148c);
+            border:none;
+            color:white;
+            font-weight:bold;
+            padding:12px 18px;
+            border-radius:32px;
+            font-size:1rem;
+            cursor:pointer;
+            flex:1;
+            display:flex;
+            align-items:center;
+            justify-content: center;
+            gap:6px;
+            box-shadow:0 4px 12px rgba(74,20,140,0.3);
+            transition:0.2s;
+        }
+        .nav-btn:active { transform:scale(0.95); }
+        .nav-btn:disabled { opacity:0.5; pointer-events:none; background:#888; }
+        .restart-btn { background: linear-gradient(135deg, #ffa726, #ef6c00); }
+        .hidden { display:none !important; }
+    </style>
+</head>
+<body>
+<div class="mobile-frame">
+    <div class="header">
+        <h1>🧪 Molecules & Compounds</h1>
+        <div class="page-indicator" id="pageTitle">Video</div>
+    </div>
+
+    <div class="card">
+        <!-- Video Page (two videos) -->
+        <div id="videoPage" class="page active">
+            <div class="video-thumb-container" onclick="window.open('https://www.youtube.com/watch?v=C0Qaf-UJ2XQ', '_blank')">
+                <img src="https://img.youtube.com/vi/C0Qaf-UJ2XQ/maxresdefault.jpg" alt="Molecules Video">
+                <div class="play-overlay"></div>
+            </div>
+            <a href="https://www.youtube.com/watch?v=C0Qaf-UJ2XQ" target="_blank" class="watch-btn">
+                <svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                What is a Molecule?
+            </a>
+
+            <div class="video-thumb-container" onclick="window.open('https://www.youtube.com/watch?v=RKSneJzwa7I', '_blank')">
+                <img src="https://img.youtube.com/vi/RKSneJzwa7I/maxresdefault.jpg" alt="Compounds Video">
+                <div class="play-overlay"></div>
+            </div>
+            <a href="https://www.youtube.com/watch?v=RKSneJzwa7I" target="_blank" class="watch-btn">
+                <svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                Elements, Molecules & Compounds
+            </a>
+            <div style="text-align:center; background:#ede7f6; padding:8px; border-radius:20px; margin-top:5px;">
+                Tap thumbnails to watch on YouTube
+            </div>
+        </div>
+
+        <!-- Concept Flip Cards -->
+        <div id="conceptPage" class="page">
+            <div style="font-weight:700; text-align:center; font-size:1.1rem;">🔁 Tap cards to flip – English ↔ Odia</div>
+            <div class="flashcard-grid" id="flashcardContainer"></div>
+        </div>
+
+        <!-- MCQ Page -->
+        <div id="mcqPage" class="page">
+            <div class="score-box">
+                <span>MCQ Score: <span id="mcqScoreDisplay">0</span>/30</span>
+                <span>Q <span id="mcqCurrentQ">1</span>/30</span>
+            </div>
+            <div id="mcqQuestionContainer">
+                <div class="quiz-question" id="mcqQuestionText"></div>
+                <div class="options" id="mcqOptions"></div>
+            </div>
+            <div class="nav-buttons" id="mcqNav">
+                <button class="nav-btn" id="mcqNextBtn" disabled>Next ▶</button>
+                <button class="nav-btn restart-btn" id="mcqRestartBtn">↺ Restart</button>
+            </div>
+            <div id="mcqResult" class="hidden" style="text-align:center; padding:20px;">
+                <h3>🎉 MCQ Completed!</h3>
+                <p style="font-size:1.3rem;">Your Score: <strong><span id="mcqFinalScore"></span>/30</strong></p>
+                <button class="nav-btn" id="mcqAgainBtn">Try Again</button>
+            </div>
+        </div>
+
+        <!-- HOT Page -->
+        <div id="hotPage" class="page">
+            <div class="score-box">
+                <span>HOT Score: <span id="hotScoreDisplay">0</span>/20</span>
+                <span>Q <span id="hotCurrentQ">1</span>/20</span>
+            </div>
+            <div id="hotQuestionContainer">
+                <div class="quiz-question" id="hotQuestionText"></div>
+                <div class="options" id="hotOptions"></div>
+            </div>
+            <div class="nav-buttons" id="hotNav">
+                <button class="nav-btn" id="hotNextBtn" disabled>Next ▶</button>
+                <button class="nav-btn restart-btn" id="hotRestartBtn">↺ Restart</button>
+            </div>
+            <div id="hotResult" class="hidden" style="text-align:center; padding:20px;">
+                <h3>🧠 HOT Completed!</h3>
+                <p style="font-size:1.3rem;">Your Score: <strong><span id="hotFinalScore"></span>/20</strong></p>
+                <button class="nav-btn" id="hotAgainBtn">Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-buttons">
+        <button class="nav-btn" id="prevPageBtn" disabled>◀ Previous</button>
+        <button class="nav-btn" id="nextPageBtn">Next ▶</button>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // Bilingual concept cards (English front, Odia back)
+        const concepts = [
+            { eng:"Molecule", odia:"ଅଣୁ – ଦୁଇ ବା ଅଧିକ ପରମାଣୁ ରାସାୟନିକ ଭାବେ ଯୁକ୍ତ; ଏହା ମୌଳିକ ବା ଯୌଗିକ ହୋଇପାରେ |" },
+            { eng:"Compound", odia:"ଯୌଗିକ – ଦୁଇ ବା ଅଧିକ ଭିନ୍ନ ମୌଳିକ ନିର୍ଦ୍ଦିଷ୍ଟ ଅନୁପାତରେ ରାସାୟନିକ ଭାବେ ଯୁକ୍ତ |" },
+            { eng:"Element", odia:"ମୌଳିକ – ଏକପ୍ରକାର ପରମାଣୁ ବିଶିଷ୍ଟ ବିଶୁଦ୍ଧ ପଦାର୍ଥ (O₂ ଏକ ଅଣୁ, କିନ୍ତୁ ଯୌଗିକ ନୁହେଁ) |" },
+            { eng:"Chemical Bond", odia:"ରାସାୟନିକ ବନ୍ଧ – ପରମାଣୁଗୁଡ଼ିକୁ ଏକତ୍ର ଧରି ରଖୁଥିବା ଆକର୍ଷଣ |" },
+            { eng:"Covalent Bond", odia:"ସହ-ସଂଯୋଜକ ବନ୍ଧ – ଇଲେକ୍ଟ୍ରନ ଯୋଡ଼ା ବାଣ୍ଟି (CO₂, H₂O) |" },
+            { eng:"Ionic Bond", odia:"ଆୟନିକ ବନ୍ଧ – ଇଲେକ୍ଟ୍ରନ ସ୍ଥାନାନ୍ତର: Na⁺Cl⁻ (ଟେବଲ ଲବଣ) |" },
+            { eng:"Chemical Formula", odia:"ରାସାୟନିକ ସଙ୍କେତ – ଅଣୁରେ ପରମାଣୁର ସଂଖ୍ୟା ଓ ପ୍ରକାର (H₂O, CO₂) |" },
+            { eng:"Molecular Compound", odia:"ଆଣବିକ ଯୌଗିକ – ଭିନ୍ନ ଅଣ-ଧାତୁ ମୌଳିକ ମଧ୍ୟରେ ସହ-ସଂଯୋଜକ ବନ୍ଧ |" },
+            { eng:"Ionic Compound", odia:"ଆୟନିକ ଯୌଗିକ – ଧାତୁ ଓ ଅଣ-ଧାତୁ ମଧ୍ୟରେ ଆୟନିକ ବନ୍ଧ (NaCl) |" },
+            { eng:"Monatomic Molecule", odia:"ଏକପରମାଣୁକ – ଗୋଟିଏ ପରମାଣୁ (He, Ne, Ar) |" },
+            { eng:"Diatomic Molecule", odia:"ଦ୍ୱି-ପରମାଣୁକ – ଦୁଇଟି ପରମାଣୁ (O₂, H₂, N₂, Cl₂) |" },
+            { eng:"Polyatomic Molecule", odia:"ବହୁ-ପରମାଣୁକ – ଦୁଇରୁ ଅଧିକ ପରମାଣୁ (H₂O, C₆H₁₂O₆) |" },
+            { eng:"Organic Compound", odia:"ଜୈବିକ ଯୌଗିକ – କାର୍ବନ-ହାଇଡ୍ରୋଜେନ ଧାରଣ (CH₄, C₂H₅OH) |" },
+            { eng:"Inorganic Compound", odia:"ଅଜୈବିକ ଯୌଗିକ – ସାଧାରଣତଃ C-H ବନ୍ଧ ନଥାଏ (NaCl, H₂O, CO₂) |" },
+            { eng:"Law of Constant Proportion", odia:"ସ୍ଥିର ଅନୁପାତ ନିୟମ – ଯୌଗିକରେ ମୌଳିକଗୁଡ଼ିକ ସର୍ବଦା ଏକ ନିର୍ଦ୍ଦିଷ୍ଟ ଭର ଅନୁପାତରେ ଥାଏ |" }
+        ];
+
+        // MCQ (30 questions) – English only
+        const mcqData = [
+            { q:"A molecule is formed when:", opts:["Atoms chemically bond together","Atoms mix physically","Atoms evaporate","Elements are separated"], ans:0 },
+            { q:"Which of the following is a compound?", opts:["O₂","N₂","H₂O","He"], ans:2 },
+            { q:"What type of bond involves the sharing of electrons?", opts:["Ionic bond","Covalent bond","Metallic bond","Hydrogen bond"], ans:1 },
+            { q:"NaCl is an example of a(n):", opts:["Covalent compound","Ionic compound","Element","Monatomic molecule"], ans:1 },
+            { q:"The chemical formula for water is:", opts:["H₂O","CO₂","NaCl","O₂"], ans:0 },
+            { q:"How many atoms are in a molecule of CO₂?", opts:["2","3","4","1"], ans:1 },
+            { q:"Which of the following is a diatomic molecule?", opts:["He","O₂","H₂O","CO₂"], ans:1 },
+            { q:"In an ionic bond:", opts:["Electrons are shared","Electrons are transferred","Protons are shared","Neutrons are exchanged"], ans:1 },
+            { q:"A substance composed of two or more different elements chemically combined is a:", opts:["Molecule","Compound","Mixture","Solution"], ans:1 },
+            { q:"Which of these exists as monatomic molecules?", opts:["Oxygen","Nitrogen","Helium","Chlorine"], ans:2 },
+            { q:"The law of constant proportion states that a compound always contains:", opts:["Variable amounts of elements","The same elements in different ratios","The same elements in fixed mass ratios","Random elements"], ans:2 },
+            { q:"Glucose (C₆H₁₂O₆) is an example of:", opts:["Ionic compound","Organic compound","Monatomic molecule","Element"], ans:1 },
+            { q:"What holds atoms together in a molecule?", opts:["Magnetic force","Chemical bonds","Gravity","Friction"], ans:1 },
+            { q:"Table salt (NaCl) is composed of:", opts:["Sodium and chlorine atoms","Sodium and chloride ions","Sodium molecules","Chlorine molecules"], ans:1 },
+            { q:"Which of the following is NOT a compound?", opts:["CO₂","H₂O","O₂","NaCl"], ans:2 },
+            { q:"A covalent bond typically forms between:", opts:["Metal and nonmetal","Two nonmetals","Two metals","Metal and metalloid"], ans:1 },
+            { q:"How many different elements are in CaCO₃?", opts:["2","3","4","5"], ans:1 },
+            { q:"Methane (CH₄) is a compound because:", opts:["It contains carbon","It contains hydrogen","It has two different elements chemically combined","It is a gas"], ans:2 },
+            { q:"In the compound MgO, the bond is likely:", opts:["Covalent","Ionic","Metallic","Hydrogen"], ans:1 },
+            { q:"Which of the following is a polyatomic molecule?", opts:["He","N₂","H₂O","Ne"], ans:2 },
+            { q:"An ionic compound is formed by:", opts:["Sharing electrons","Transferring electrons","Mixing elements","Melting metals"], ans:1 },
+            { q:"The formula of magnesium chloride is MgCl₂. How many chlorine atoms are there per magnesium?", opts:["1","2","3","4"], ans:1 },
+            { q:"Which statement about molecules is true?", opts:["All molecules are compounds","All compounds are molecules","A molecule can be an element or a compound","Molecules only contain one type of atom"], ans:2 },
+            { q:"Water is a liquid at room temperature because of:", opts:["Ionic bonds","Covalent bonds","Hydrogen bonds between molecules","Metallic bonds"], ans:2 },
+            { q:"Which of the following is an ionic compound?", opts:["CO","KBr","NH₃","CH₄"], ans:1 },
+            { q:"How many total atoms are in Al₂(SO₄)₃?", opts:["5","10","17","15"], ans:2 },
+            { q:"The bond in an O₂ molecule is:", opts:["Ionic","Covalent (double bond)","Single covalent","Metallic"], ans:1 },
+            { q:"A compound differs from a mixture because:", opts:["A compound has variable composition","A compound's components are physically mixed","A compound has a fixed composition","A compound can be separated by physical means"], ans:2 },
+            { q:"The smallest unit of an ionic compound is called a:", opts:["Molecule","Formula unit","Atom","Ion"], ans:1 },
+            { q:"Which element is present in all organic compounds?", opts:["Oxygen","Nitrogen","Carbon","Hydrogen"], ans:2 }
+        ];
+
+        // HOT (20 questions) – English only
+        const hotData = [
+            { q:"Why is O₂ considered a molecule but not a compound?", opts:["It contains only one type of element","It has ionic bonds","It is not stable","It is a metal"], ans:0 },
+            { q:"How many atoms of oxygen are in 2 molecules of H₂SO₄?", opts:["4","6","8","2"], ans:2 },
+            { q:"If a compound is 40% sulfur and 60% oxygen by mass, what is its simplest formula? (Atomic masses: S=32, O=16)", opts:["SO","SO₂","SO₃","S₂O"], ans:2 },
+            { q:"Why does sodium chloride (NaCl) not exist as individual molecules?", opts:["It forms a giant ionic lattice","It is covalent","It is a liquid","It dissociates"], ans:0 },
+            { q:"What is the total number of atoms in 3 molecules of glucose (C₆H₁₂O₆)?", opts:["24","72","48","144"], ans:1 },
+            { q:"How does a compound's properties differ from its constituent elements?", opts:["They are always the same","They are completely different","They are a mixture","Elements lose their identity"], ans:1 },
+            { q:"Which of the following is a correct pairing of formula and bond type?", opts:["CO₂ - ionic","NH₃ - covalent","NaCl - covalent","O₂ - ionic"], ans:1 },
+            { q:"How many grams of oxygen are present in 44g of CO₂? (C=12, O=16)", opts:["16g","32g","8g","44g"], ans:1 },
+            { q:"A compound always has a fixed composition by mass. This is the law of:", opts:["Conservation of mass","Constant proportion","Multiple proportion","Thermodynamics"], ans:1 },
+            { q:"Water (H₂O) and hydrogen peroxide (H₂O₂) illustrate the law of:", opts:["Constant proportion","Multiple proportions","Conservation of mass","Octet rule"], ans:1 },
+            { q:"Why is carbon able to form so many different compounds?", opts:["It is a metal","It can form four covalent bonds","It is diatomic","It is inert"], ans:1 },
+            { q:"Which molecule has a triple covalent bond?", opts:["O₂","N₂","H₂O","CO₂"], ans:1 },
+            { q:"In the compound Al₂O₃, what is the charge of the aluminum ion?", opts:["+1","+2","+3","-3"], ans:2 },
+            { q:"How many moles of atoms are in 18g of water? (H=1, O=16)", opts:["1","2","3","0.5"], ans:2 },
+            { q:"If a molecule has the formula C₂H₆, how many covalent bonds are present?", opts:["6","7","8","5"], ans:1 },
+            { q:"Which of the following is an inorganic compound?", opts:["Methane (CH₄)","Ethanol (C₂H₅OH)","Sodium bicarbonate (NaHCO₃)","Acetic acid (CH₃COOH)"], ans:2 },
+            { q:"The bond in a chlorine molecule (Cl₂) is:", opts:["Ionic","Single covalent","Double covalent","Triple covalent"], ans:1 },
+            { q:"How does the structure of diamond differ from graphite? (both are carbon)", opts:["Same bonding, same structure","Diamond: each carbon bonded to 4 others; Graphite: bonded to 3","Diamond is covalent, graphite is ionic","No difference"], ans:1 },
+            { q:"What is the chemical formula of a compound containing 2 potassium ions for every oxide ion?", opts:["KO","K₂O","KO₂","K₂O₂"], ans:1 },
+            { q:"Why do ionic compounds have high melting points?", opts:["Weak intermolecular forces","Strong electrostatic forces between ions","Covalent bonds","Metallic bonding"], ans:1 }
+        ];
+
+        // Flip card rendering
+        function renderConcepts() {
+            const grid = document.getElementById('flashcardContainer');
+            grid.innerHTML = '';
+            concepts.forEach(item => {
+                const container = document.createElement('div');
+                container.className = 'flip-container';
+                const flipper = document.createElement('div');
+                flipper.className = 'flipper';
+                const front = document.createElement('div');
+                front.className = 'front';
+                front.innerHTML = `<div>${item.eng}</div><div class="flip-instruction">Tap to see Odia</div>`;
+                const back = document.createElement('div');
+                back.className = 'back';
+                back.innerHTML = item.odia;
+                flipper.appendChild(front);
+                flipper.appendChild(back);
+                container.appendChild(flipper);
+                flipper.addEventListener('click', function(e) {
+                    this.classList.toggle('flipped');
+                });
+                grid.appendChild(container);
+            });
+        }
+
+        // Quiz engine
+        class QuizEngine {
+            constructor(type, questions) {
+                this.type = type;
+                this.questions = questions;
+                this.total = questions.length;
+                this.idx = 0;
+                this.score = 0;
+                this.answered = false;
+                this.active = false;
+                this.el = {
+                    score: document.getElementById(`${type}ScoreDisplay`),
+                    cur: document.getElementById(`${type}CurrentQ`),
+                    qText: document.getElementById(`${type}QuestionText`),
+                    opts: document.getElementById(`${type}Options`),
+                    next: document.getElementById(`${type}NextBtn`),
+                    restart: document.getElementById(`${type}RestartBtn`),
+                    resultDiv: document.getElementById(`${type}Result`),
+                    final: document.getElementById(`${type}FinalScore`),
+                    again: document.getElementById(`${type}AgainBtn`),
+                    nav: document.getElementById(`${type}Nav`),
+                    container: document.getElementById(`${type}QuestionContainer`)
+                };
+                this.el.next.addEventListener('click', ()=>this.next());
+                this.el.restart.addEventListener('click', ()=>this.restart());
+                this.el.again.addEventListener('click', ()=>this.restart());
+            }
+
+            start() {
+                this.active = true;
+                this.idx = 0;
+                this.score = 0;
+                this.answered = false;
+                this.el.resultDiv.classList.add('hidden');
+                this.el.nav.classList.remove('hidden');
+                this.el.container.classList.remove('hidden');
+                this.render();
+                this.el.next.disabled = true;
+                this.el.score.textContent = '0';
+            }
+
+            render() {
+                if (this.idx >= this.questions.length) {
+                    this.showResult();
+                    return;
+                }
+                const q = this.questions[this.idx];
+                this.el.qText.textContent = q.q;
+                this.el.opts.innerHTML = '';
+                this.answered = false;
+                this.el.next.disabled = true;
+                q.opts.forEach((opt, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn';
+                    btn.textContent = opt;
+                    btn.addEventListener('click', () => this.select(i, btn));
+                    this.el.opts.appendChild(btn);
+                });
+                this.el.cur.textContent = this.idx + 1;
+            }
+
+            select(idx, btn) {
+                if (this.answered) return;
+                this.answered = true;
+                const correct = this.questions[this.idx].ans;
+                const all = this.el.opts.querySelectorAll('.option-btn');
+                all.forEach(b => b.classList.remove('selected','correct','incorrect'));
+                btn.classList.add('selected');
+                if (idx === correct) {
+                    btn.classList.add('correct');
+                    this.score++;
+                } else {
+                    btn.classList.add('incorrect');
+                    all[correct].classList.add('correct');
+                }
+                this.el.score.textContent = this.score;
+                this.el.next.disabled = false;
+            }
+
+            next() {
+                if (!this.answered) return;
+                this.idx++;
+                if (this.idx < this.questions.length) {
+                    this.render();
+                } else {
+                    this.showResult();
+                }
+            }
+
+            showResult() {
+                this.el.container.classList.add('hidden');
+                this.el.nav.classList.add('hidden');
+                this.el.resultDiv.classList.remove('hidden');
+                this.el.final.textContent = this.score;
+            }
+
+            restart() {
+                this.start();
+            }
+        }
+
+        const mcq = new QuizEngine('mcq', mcqData);
+        const hot = new QuizEngine('hot', hotData);
+
+        const pages = ['video','concept','mcq','hot'];
+        let curPage = 0;
+        const pageDivs = {
+            video: document.getElementById('videoPage'),
+            concept: document.getElementById('conceptPage'),
+            mcq: document.getElementById('mcqPage'),
+            hot: document.getElementById('hotPage')
+        };
+        const prevBtn = document.getElementById('prevPageBtn');
+        const nextBtn = document.getElementById('nextPageBtn');
+        const pageTitle = document.getElementById('pageTitle');
+
+        function showPage(i) {
+            Object.values(pageDivs).forEach(p => p.classList.remove('active'));
+            pageDivs[pages[i]].classList.add('active');
+            pageTitle.textContent = ['Videos','Flip Cards','MCQ (30)','HOT (20)'][i];
+            prevBtn.disabled = i === 0;
+            nextBtn.disabled = i === pages.length-1;
+            if (i === 1) renderConcepts();
+            else if (i === 2 && !mcq.active) mcq.start();
+            else if (i === 3 && !hot.active) hot.start();
+        }
+
+        prevBtn.addEventListener('click', ()=>{
+            if (curPage > 0) { curPage--; showPage(curPage); }
+        });
+        nextBtn.addEventListener('click', ()=>{
+            if (curPage < pages.length-1) { curPage++; showPage(curPage); }
+        });
+
+        showPage(0);
+    })();
+</script>
+</body>
+</html>
